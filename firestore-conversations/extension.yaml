@@ -1,13 +1,12 @@
-name: firestore-send-sms
+name: firestore-conversations
 version: 0.0.1
 specVersion: v1beta
 
-displayName: Trigger SMS
-description:
-  Sends an SMS based on the contents of a document written to a specified Cloud Firestore collection.
+displayName: Conversations
+description: Allow messaging conversations through firestore collections
 
-sourceUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-send-sms
-releaseNotesUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-send-sms/CHANGELOG.md
+sourceUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-conversations
+releaseNotesUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-conversations/CHANGELOG.md
 
 author:
   authorName: MessageBird
@@ -17,33 +16,45 @@ contributors:
   - authorName: Marcel Corso
     email: marcel@messagebird.com
     url: https://github.com/marcelcorso
-  
+
 billingRequired: true
 
 roles:
   - role: datastore.user
-    reason: Allows this extension to access Cloud Firestore to read and process added documents.
+    reason:
+      Allows this extension to access Cloud Firestore to read and process added
+      documents.
 
 resources:
-  - name: processQueue
+  - name: processOutbox
     type: firebaseextensions.v1beta.function
     description:
       Processes document changes in the specified Cloud Firestore collection,
-      delivers SMSs, and updates the document with delivery status information.
+      delivers messages, and updates the document with delivery status
+      information.
     properties:
       sourceDirectory: .
       location: ${LOCATION}
       eventTrigger:
         eventType: providers/cloud.firestore/eventTypes/document.write
-        resource: projects/${PROJECT_ID}/databases/(default)/documents/${SMS_COLLECTION}/{id}
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${OUTBOX_COLLECTION}/{id}
+
+  - name: processWebhook
+    type: firebaseextensions.v1beta.function
+    description: Processes http requests from the messagebird conversation apis
+    properties:
+      sourceDirectory: .
+      location: ${LOCATION}
+      httpsTrigger:
+        name: webhook
 
 params:
   - param: LOCATION
     type: select
     label: Cloud Functions location
     description: >-
-      Where do you want to deploy the functions created for this extension?
-      You usually want a location close to your database. For help selecting a
+      Where do you want to deploy the functions created for this extension? You
+      usually want a location close to your database. For help selecting a
       location, refer to the [location selection
       guide](https://firebase.google.com/docs/functions/locations).
     options:
@@ -73,26 +84,24 @@ params:
     example: ZYpqq7LUUd8ZhfwodPMeilZSK
     required: true
 
-  - param: SMS_COLLECTION
+  - param: OUTBOX_COLLECTION
     type: string
-    label: SMS documents collection
-    default: sms
+    label: outbox message documents collection
+    default: conversation_outbox
     validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
     validationErrorMessage: Must be a valid Cloud Firestore collection
     required: true
     description: >-
-      What is the path to the collection that contains the documents used to build and send the SMSs?
+      What is the path to the collection that contains the documents used to
+      build and send the messages?
 
-  - param: DEFAULT_ORIGINATOR
+  - param: MESSAGES_COLLECTION
     type: string
-    label: Default Originator
-    validationRegex: "^[a-zA-Z1-9]{3,17}$"
-    validationErrorMessage: Must be a valid SMS originator (https://support.messagebird.com/hc/en-us/articles/115002628665-What-is-the-originator-)
+    label: message documents collection
+    default: conversation_messages
+    validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
+    validationErrorMessage: Must be a valid Cloud Firestore collection
     required: true
     description: >-
-      An originator is the name or number from which the message is sent. . 
-      When you receive a text message, your phone always tells you something about where the SMS comes from, either it says:
-      * The name of a company or product
-      * A number from which it has been sent
-      * If you saved the number in your phone contacts, your phone replaces the number with the contact name.
-    example: +4461234567 or MessageBird
+      What is the path to the collection that contains the documents related to
+      incoming and outgoing messages?
