@@ -1,0 +1,107 @@
+name: firestore-conversations
+version: 0.0.1
+specVersion: v1beta
+
+displayName: Conversations
+description: Allow messaging conversations through firestore collections
+
+sourceUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-conversations
+releaseNotesUrl: https://github.com/marcelcorso/firebase-messagebird/tree/master/firestore-conversations/CHANGELOG.md
+
+author:
+  authorName: MessageBird
+  url: https://messagebird.com
+
+contributors:
+  - authorName: Marcel Corso
+    email: marcel@messagebird.com
+    url: https://github.com/marcelcorso
+
+billingRequired: true
+
+roles:
+  - role: datastore.user
+    reason:
+      Allows this extension to access Cloud Firestore to read and process added
+      documents.
+
+resources:
+  - name: processOutbox
+    type: firebaseextensions.v1beta.function
+    description:
+      Processes document changes in the specified Cloud Firestore collection,
+      delivers messages, and updates the document with delivery status
+      information.
+    properties:
+      sourceDirectory: .
+      location: ${LOCATION}
+      eventTrigger:
+        eventType: providers/cloud.firestore/eventTypes/document.write
+        resource: projects/${PROJECT_ID}/databases/(default)/documents/${OUTBOX_COLLECTION}/{id}
+
+  - name: processWebhook
+    type: firebaseextensions.v1beta.function
+    description: Processes http requests from the messagebird conversation apis
+    properties:
+      sourceDirectory: .
+      location: ${LOCATION}
+      httpsTrigger:
+        name: webhook
+
+params:
+  - param: LOCATION
+    type: select
+    label: Cloud Functions location
+    description: >-
+      Where do you want to deploy the functions created for this extension? You
+      usually want a location close to your database. For help selecting a
+      location, refer to the [location selection
+      guide](https://firebase.google.com/docs/functions/locations).
+    options:
+      - label: Iowa (us-central1)
+        value: us-central1
+      - label: South Carolina (us-east1)
+        value: us-east1
+      - label: Northern Virginia (us-east4)
+        value: us-east4
+      - label: Belgium (europe-west1)
+        value: europe-west1
+      - label: London (europe-west2)
+        value: europe-west2
+      - label: Hong Kong (asia-east2)
+        value: asia-east2
+      - label: Tokyo (asia-northeast1)
+        value: asia-northeast1
+    default: us-central1
+    required: true
+    immutable: true
+
+  - param: ACCESS_KEY
+    type: string
+    label: MessageBird Access Key
+    description: >-
+      A MessageBird's REST api access key
+    example: ZYpqq7LUUd8ZhfwodPMeilZSK
+    required: true
+
+  - param: OUTBOX_COLLECTION
+    type: string
+    label: outbox message documents collection
+    default: conversation_outbox
+    validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
+    validationErrorMessage: Must be a valid Cloud Firestore collection
+    required: true
+    description: >-
+      What is the path to the collection that contains the documents used to
+      build and send the messages?
+
+  - param: MESSAGES_COLLECTION
+    type: string
+    label: message documents collection
+    default: conversation_messages
+    validationRegex: "^[^/]+(/[^/]+/[^/]+)*$"
+    validationErrorMessage: Must be a valid Cloud Firestore collection
+    required: true
+    description: >-
+      What is the path to the collection that contains the documents related to
+      incoming and outgoing messages?
